@@ -6,7 +6,11 @@ from tkinter import *
 from tkinter import ttk
 from PIL import ImageTk, Image
 
+from custom_dialog import remote_dialog, ParamHolder, SSHWrapper, stop_file_thread
+
 home_dir = os.listdir("/home/eason")
+param_holder = ParamHolder()
+ssh_wrapper = SSHWrapper()
 
 
 def handle_open_file(x):
@@ -37,10 +41,21 @@ def handle_tree_open(x):
 def handle_tree_select(x):
     file_tree.focus_get().bind("<Double-1>", handle_open_file)
 
+
+def show_remote_dialog():
+    remote_dialog(root, param_holder, ssh_wrapper, file_tree, text_widget)
+
+
+def handle_window_close():
+    stop_file_thread()
+    root.destroy()
+
+
 root = Tk()
 root.title("Log Viewer")
 root.minsize(1280, 800)
 root.option_add("*tearOff", FALSE)
+root.protocol("WM_DELETE_WINDOW", handle_window_close)
 
 i = ImageTk.PhotoImage(Image.open("download.png"))
 mainframe = ttk.Frame(root)
@@ -53,6 +68,7 @@ root["menu"] = menubar
 # menubar.add_cascade(menu=menu_file, label='File')
 # menubar.add_cascade(menu=menu_edit, label='Edit')
 menubar.add_command(label="download", image=i, command=tkinter.filedialog.askdirectory)
+menubar.add_command(label="connect", image=i, command=show_remote_dialog)
 # menubar.add_command(label="download")
 
 
@@ -67,15 +83,18 @@ text_scroll = Scrollbar(text_frame, orient=VERTICAL, command=text_widget.yview)
 
 file_tree["yscrollcommand"] = file_list_scroll_y.set
 text_widget["yscrollcommand"] = text_scroll.set
+text_widget.bind("<Control-a>", lambda x: text_widget.tag_add("sel", "1.0", "end"))
+text_widget.bind("<Control-A>", lambda x: text_widget.tag_add("sel", "1.0", "end"))
+text_widget.tag_config("sel", background="gray")
 
-for d in home_dir:
-    file_tree.insert("", "end", str(Path("/home/eason") / d), text=d)
-    if (Path("/home/eason")/d).is_dir():
-        file_tree.insert(str(Path("/home/eason")/d), "end", text="<empty>")
+# for d in home_dir:
+#     file_tree.insert("", "end", str(Path("/home/eason")/d), text=d)
+#     if (Path("/home/eason")/d).is_dir():
+#         file_tree.insert(str(Path("/home/eason")/d), "end", text="<empty>")
 
 
-file_tree.bind("<<TreeviewOpen>>", handle_tree_open)
-file_tree.bind("<<TreeviewSelect>>", handle_tree_select)
+# file_tree.bind("<<TreeviewOpen>>", handle_tree_open)
+# file_tree.bind("<<TreeviewSelect>>", handle_tree_select)
 
 
 # action_get = Button(root, image=i, default="active")
