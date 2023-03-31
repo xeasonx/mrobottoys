@@ -46,8 +46,16 @@ class SSHWrapper:
             self.sftp_client.listdir(p)
         except FileNotFoundError:
             return False
+        except PermissionError:
+            return False
         else:
             return True
+
+    def close(self):
+        if self.sftp_client is not None:
+            self.sftp_client.close()
+            self.sftp_client.close()
+            print("close ssh connection")
 
 
 class RemoteFileThread(Thread):
@@ -62,24 +70,38 @@ class RemoteFileThread(Thread):
     def run(self) -> None:
         print(f"reading {self.filepath}")
         self.text_widget.delete("1.0", "end")
-        f = self.sftp.open(self.filepath)
-        while not self.is_stop:
-            f.seek(f.tell())
-            bytes_read = f.read(self.buffer).decode("utf-8")
-            if len(bytes_read.strip()):
-                print(bytes_read)
-                self.text_widget.insert("end", bytes_read)
-        f.close()
+        try:
+            f = self.sftp.open(self.filepath)
+            while not self.is_stop:
+                f.seek(f.tell())
+                try:
+                    bytes_read = f.read(self.buffer).decode("utf-8")
+                    if len(bytes_read.strip()):
+                        print(f"{len(bytes_read)} read")
+                        self.text_widget.insert("end", bytes_read)
+                        self.text_widget.see("end")
+                except UnicodeDecodeError:
+                    print("decode failed")
+                    break
+            f.close()
+        except PermissionError:
+            print("permission denied")
+        except Exception:
+            print("unknown error")
+        finally:
+            f.close()
 
 
 def stop_file_thread():
     if len(file_thread):
+        print("stop reading thread")
         file_thread[0].is_stop = True
         file_thread[0].join()
 
 
 def update_tree(tree_widget, text_widget, ssh_wrapper: SSHWrapper):
     def handle_remote_open_file(x):
+        stop_file_thread()
         remote_filepath = tree_widget.focus()
         if ssh_wrapper.is_dir(remote_filepath):
             handle_remote_tree_open(x)
@@ -108,11 +130,21 @@ def update_tree(tree_widget, text_widget, ssh_wrapper: SSHWrapper):
                 tree_widget.insert(str(Path(current_dir)), "end", str(sub_child), text=sub)
                 if ssh_wrapper.is_dir(str(sub_child)):
                     tree_widget.insert(str(sub_child), "end", text="<empty>")
+                    
+    def handle_context_menu(e):
+        menu = Menu(tree_widget)
+        menu.add_command(label="toggle")
+        menu.add_command(label="open")
+        menu.add_command(label="open in new window")
+        menu.post(e.x_root, e.y_root)
 
     def handle_remote_tree_select(x):
         tree_widget.focus_get().bind("<Double-1>", handle_remote_open_file)
+        tree_widget.focus_get().bind("<3>", handle_context_menu)
 
     stop_file_thread()
+    for child in tree_widget.get_children():
+        tree_widget.delete(child)
     dir_list = ssh_wrapper.sftp_client.listdir(ssh_wrapper.remote_home)
     for d in sorted(dir_list):
         target_path = Path(ssh_wrapper.remote_home)/d
@@ -125,8 +157,9 @@ def update_tree(tree_widget, text_widget, ssh_wrapper: SSHWrapper):
 
 
 def remote_dialog(parent, param_holder: ParamHolder, ssh_wrapper: SSHWrapper, tree_widget, text_widget):
-    def dismiss():
+    def apply():
         print(param_holder.params["host"].get())
+        ssh_wrapper.close()
         ssh_opt = {
             "host": param_holder.params["host"].get(),
             "port": param_holder.params["port"].get(),
@@ -141,6 +174,10 @@ def remote_dialog(parent, param_holder: ParamHolder, ssh_wrapper: SSHWrapper, tr
         else:
             print("connection error")
 
+    def dismiss():
+        dialog.grab_release()
+        dialog.destroy()
+
     dialog = Toplevel(parent)
     param_holder.set_param("host", StringVar(value="192.168.3.51"))
     param_holder.set_param("port", IntVar(value=22))
@@ -154,7 +191,7 @@ def remote_dialog(parent, param_holder: ParamHolder, ssh_wrapper: SSHWrapper, tr
     port_entry = ttk.Entry(dialog, textvariable=param_holder.get_param("port"))
     username_entry = ttk.Entry(dialog, textvariable=param_holder.get_param("username"))
     password_entry = ttk.Entry(dialog, textvariable=param_holder.get_param("password"))
-    button_ok = ttk.Button(dialog, text="OK", command=dismiss)
+    button_ok = ttk.Button(dialog, text="OK", command=apply)
     button_cancel = ttk.Button(dialog, text="Cancel", command=dismiss)
 
     label_host.grid(column=0, row=0, sticky=(E,))

@@ -48,6 +48,7 @@ def show_remote_dialog():
 
 def handle_window_close():
     stop_file_thread()
+    ssh_wrapper.close()
     root.destroy()
 
 
@@ -83,9 +84,9 @@ text_scroll = Scrollbar(text_frame, orient=VERTICAL, command=text_widget.yview)
 
 file_tree["yscrollcommand"] = file_list_scroll_y.set
 text_widget["yscrollcommand"] = text_scroll.set
-text_widget.bind("<Control-a>", lambda x: text_widget.tag_add("sel", "1.0", "end"))
-text_widget.bind("<Control-A>", lambda x: text_widget.tag_add("sel", "1.0", "end"))
-text_widget.tag_config("sel", background="gray")
+text_widget.bind("<Control-a>", lambda x: text_widget.tag_add("sel", "1.0"))
+text_widget.bind("<Control-A>", lambda x: text_widget.tag_add("sel", "1.0"))
+text_widget.tag_config("sel", background="grey")
 
 # for d in home_dir:
 #     file_tree.insert("", "end", str(Path("/home/eason")/d), text=d)
