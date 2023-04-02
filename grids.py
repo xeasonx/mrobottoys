@@ -1,41 +1,90 @@
 from tkinter import *
-from tkinter import ttk
-
-
 root = Tk()
-content = ttk.Frame(root, padding=(3, 5, 3, 5))
-frame = ttk.Frame(content, borderwidth=5, relief="ridge", width=200, height=100)
-namelbl = ttk.Label(content, text="Name")
-name = ttk.Entry(content)
 
-onevar = BooleanVar(value=True)
-twovar = BooleanVar(value=False)
-threevar = BooleanVar(value=True)
+cursors = [
+    # "X_cursor",
+    # "arrow",
+    # "based_arrow_down",
+    # "based_arrow_up",
+    # "boat",
+    # "bogosity",
+    "bottom_left_corner",
+    "bottom_right_corner",
+    "bottom_side",
+    "bottom_tee",
+    "box_spiral",
+    "center_ptr",
+    "circle",
+    "clock",
+    "coffee_mug",
+    "cross",
+    "cross_reverse",
+    "crosshair",
+    "diamond_cross",
+    "dot",
+    "dotbox",
+    "double_arrow",
+    "draft_large",
+    "draft_small",
+    "draped_box",
+    "exchange",
+    "fleur",
+    "gobbler",
+    "gumby",
+    "hand1",
+    "hand2",
+    "heart",
+    "icon",
+    "iron_cross",
+    "left_ptr",
+    "left_side",
+    "left_tee",
+    "leftbutton",
+    "ll_angle",
+    "lr_angle",
+    "man",
+    "middlebutton",
+    "mouse",
+    "none",
+    "pencil",
+    "pirate",
+    "plus",
+    "question_arrow",
+    "right_ptr",
+    "right_side",
+    "right_tee",
+    "rightbutton",
+    "rtl_logo",
+    "sailboat",
+    "sb_down_arrow",
+    "sb_h_double_arrow",
+    "sb_left_arrow",
+    "sb_right_arrow",
+    "sb_up_arrow",
+    "sb_v_double_arrow",
+    "shuttle",
+    "sizing",
+    "spider",
+    "spraycan",
+    "star",
+    "target",
+    "tcross",
+    "top_left_arrow",
+    "top_left_corner",
+    "top_right_corner",
+    "top_side",
+    "top_tee",
+    "trek",
+    "ul_angle",
+    "umbrella",
+    "ur_angle",
+    "watch",
+    "xterm"
+]
 
-one = ttk.Checkbutton(content, text="One", variable=onevar, onvalue=True)
-two = ttk.Checkbutton(content, text="Two", variable=twovar, onvalue=True)
-three = ttk.Checkbutton(content, text="Three", variable=threevar, onvalue=True)
-ok = ttk.Button(content, text="OK")
-cancel = ttk.Button(content, text="Cancel")
+# Iterate through all cursors
+for cursor in cursors:
+    Button(root, text=cursor, cursor=cursor).pack()
 
-content.grid(column=0, row=0, sticky=(N, S, E, W))
-frame.grid(column=0, row=0, columnspan=3, rowspan=2, sticky=(N, S, E, W))
-namelbl.grid(column=3, row=0, columnspan=2, sticky=(N, W), padx=5)
-name.grid(column=3, row=1, columnspan=2, sticky=(N, W, E), padx=5, pady=5)
-one.grid(column=0, row=3)
-two.grid(column=1, row=3)
-three.grid(column=2, row=3)
-ok.grid(column=3, row=3)
-cancel.grid(column=4, row=3)
-
-root.columnconfigure(0, weight=1)
-root.rowconfigure(0, weight=1)
-content.columnconfigure(0, weight=3)
-content.columnconfigure(1, weight=3)
-content.columnconfigure(2, weight=3)
-content.columnconfigure(3, weight=1)
-content.columnconfigure(4, weight=1)
-content.rowconfigure(1, weight=1)
-
-
-root.mainloop()
+if __name__ == '__main__':
+    root.mainloop()

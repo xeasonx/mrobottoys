@@ -4,8 +4,6 @@ import tkinter.filedialog
 from pathlib import Path
 from tkinter import *
 from tkinter import ttk
-from PIL import ImageTk, Image
-
 from custom_dialog import remote_dialog, ParamHolder, SSHWrapper, stop_file_thread
 
 home_dir = os.listdir("/home/eason")
@@ -52,58 +50,97 @@ def handle_window_close():
     root.destroy()
 
 
+def track_cursor_enter(e):
+    root.config(cursor="sb_h_double_arrow")
+
+
+def track_cursor_leave(e):
+    root.config(cursor="arrow")
+
+
+def resize_widget(e):
+    root.config(cursor="sb_h_double_arrow")
+    # print(file_tree.column("#0").get("width") + e.x)
+    file_tree.grid_remove()
+    file_tree.column("#0", width=file_tree.column("#0").get("width") + e.x)
+    # print(file_tree.column("#0"))
+    file_tree.grid(column=0, row=0, sticky=(N, S, E, W))
+
+
+def redraw_widget(e):
+    print("stop")
+    root.config(cursor="arrow")
+    # file_tree.grid_forget()
+    # file_tree.column("#0", width=200)
+    # file_tree.grid(column=0, row=0, sticky=(N, S, E, W))
+
+    # children = file_tree.get_children()
+    # for child in children:
+    #     file_tree.detach(child)
+    #
+    #
+    #
+    # n_file_tree = ttk.Treeview(file_list_frame)
+    # for child in children:
+    #     n_file_tree.move(child, "", "end")
+    # file_tree.destroy()
+    # n_file_tree.column("#0", width=file_list_width + e.x)
+    # n_file_tree.grid(column=0, row=0, sticky=(N, S, E, W))
+
+
 root = Tk()
 root.title("Log Viewer")
 root.minsize(1280, 800)
 root.option_add("*tearOff", FALSE)
 root.protocol("WM_DELETE_WINDOW", handle_window_close)
 
-i = ImageTk.PhotoImage(Image.open("download.png"))
+from icons import *
+
 mainframe = ttk.Frame(root)
 mainframe.grid(column=0, row=0, sticky=(N, S, E, W))
+sep = ttk.Separator(mainframe, orient=VERTICAL)
 
 menubar = Menu(root)
 root["menu"] = menubar
-# menu_file = Menu(menubar)
-# menu_edit = Menu(menubar)
-# menubar.add_cascade(menu=menu_file, label='File')
-# menubar.add_cascade(menu=menu_edit, label='Edit')
-menubar.add_command(label="download", image=i, command=tkinter.filedialog.askdirectory)
-menubar.add_command(label="connect", image=i, command=show_remote_dialog)
-# menubar.add_command(label="download")
+menubar.add_command(label="download", image=ICON_DOWNLOAD)
+menubar.add_command(label="setting", image=ICON_GEAR, command=show_remote_dialog)
 
 
 file_list_frame = ttk.Frame(mainframe)
 
 text_frame = ttk.Frame(mainframe)
 file_tree = ttk.Treeview(file_list_frame)
+file_tree.column("#0", width=500, stretch=True)
 
 text_widget = Text(text_frame)
 file_list_scroll_y = Scrollbar(file_list_frame, orient=VERTICAL, command=file_tree.yview)
 text_scroll = Scrollbar(text_frame, orient=VERTICAL, command=text_widget.yview)
 
+file_tree["show"] = "tree"
 file_tree["yscrollcommand"] = file_list_scroll_y.set
 text_widget["yscrollcommand"] = text_scroll.set
 text_widget.bind("<Control-a>", lambda x: text_widget.tag_add("sel", "1.0"))
 text_widget.bind("<Control-A>", lambda x: text_widget.tag_add("sel", "1.0"))
 text_widget.tag_config("sel", background="grey")
 
-# for d in home_dir:
-#     file_tree.insert("", "end", str(Path("/home/eason")/d), text=d)
-#     if (Path("/home/eason")/d).is_dir():
-#         file_tree.insert(str(Path("/home/eason")/d), "end", text="<empty>")
+sep.bind("<Enter>", track_cursor_enter)
+sep.bind("<Leave>", track_cursor_leave)
+sep.bind("<B1-Motion>", resize_widget)
+sep.bind("<ButtonRelease>", redraw_widget)
+
+for d in home_dir:
+    file_tree.insert("", "end", str(Path("/home/eason")/d), text=d)
+    if (Path("/home/eason")/d).is_dir():
+        file_tree.insert(str(Path("/home/eason")/d), "end", text="<empty>")
 
 
 # file_tree.bind("<<TreeviewOpen>>", handle_tree_open)
 # file_tree.bind("<<TreeviewSelect>>", handle_tree_select)
 
 
-# action_get = Button(root, image=i, default="active")
-# action_get.grid(column=0, row=0)
-# menubar.add_command()
-
 file_list_frame.grid(column=0, row=0, sticky=(N, S, E, W))
-text_frame.grid(column=1, row=0, sticky=(N, S, E, W))
+sep.grid(column=1, row=0, sticky=(N, S))
+text_frame.grid(column=2, row=0, sticky=(N, S, E, W))
 
 file_list_scroll_y.grid(column=1, row=0, sticky=(N, S, E, W))
 text_scroll.grid(column=1, row=0, sticky=(N, S, E, W))
@@ -117,8 +154,9 @@ root.rowconfigure(0, weight=1)
 root.columnconfigure(0, weight=1)
 
 mainframe.rowconfigure(0, weight=1)
-mainframe.columnconfigure(0, weight=3)
-mainframe.columnconfigure(1, weight=7)
+# mainframe.columnconfigure(0, weight=3)
+# mainframe.columnconfigure(1, weight=0)
+mainframe.columnconfigure(2, weight=1)
 
 file_list_frame.rowconfigure(0, weight=1)
 file_list_frame.columnconfigure(0, weight=1)
