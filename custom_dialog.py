@@ -8,6 +8,8 @@ from tkinter import ttk
 
 file_thread = []
 
+context_menu = None
+
 
 class ParamHolder:
     def __init__(self):
@@ -77,7 +79,7 @@ class RemoteFileThread(Thread):
                 try:
                     bytes_read = f.read(self.buffer).decode("utf-8")
                     if len(bytes_read.strip()):
-                        print(f"{len(bytes_read)} read")
+                        # print(f"{len(bytes_read)} read")
                         self.text_widget.insert("end", bytes_read)
                         self.text_widget.see("end")
                 except UnicodeDecodeError:
@@ -93,13 +95,18 @@ class RemoteFileThread(Thread):
 
 
 def stop_file_thread():
-    if len(file_thread):
-        print("stop reading thread")
-        file_thread[0].is_stop = True
-        file_thread[0].join()
+    for t in file_thread:
+        if t.is_alive():
+            print(f"stop reading {t.filepath}")
+            t.is_stop = True
+            t.join()
+    # if len(file_thread):
+    #     print("stop reading thread")
+    #     file_thread[0].is_stop = True
+    #     file_thread[0].join()
 
 
-def update_tree(tree_widget, text_widget, ssh_wrapper: SSHWrapper):
+def update_tree(tree_widget, text_widget, ssh_wrapper: SSHWrapper, context_menu):
     def handle_remote_open_file(x):
         stop_file_thread()
         remote_filepath = tree_widget.focus()
@@ -132,15 +139,27 @@ def update_tree(tree_widget, text_widget, ssh_wrapper: SSHWrapper):
                     tree_widget.insert(str(sub_child), "end", text="<empty>")
                     
     def handle_context_menu(e):
-        menu = Menu(tree_widget)
-        menu.add_command(label="toggle")
-        menu.add_command(label="open")
-        menu.add_command(label="open in new window")
-        menu.post(e.x_root, e.y_root)
+        context_menu.unpost()
+        context_menu.post(e.x_root, e.y_root)
+
+        # global context_menu
+        #
+        # if context_menu is None:
+        #     context_menu = Menu(tree_widget)
+        #     context_menu.add_command(label="toggle")
+        #     context_menu.add_command(label="open", command=lambda x: create_log_window())
+        #     context_menu.add_command(label="open in new window")
+        # else:
+        #     context_menu.unpost()
+        # context_menu.post(e.x_root, e.y_root)
 
     def handle_remote_tree_select(x):
         tree_widget.focus_get().bind("<Double-1>", handle_remote_open_file)
         tree_widget.focus_get().bind("<3>", handle_context_menu)
+
+    def handle_right_click(e):
+        print(e)
+        handle_context_menu(e)
 
     stop_file_thread()
     for child in tree_widget.get_children():
@@ -151,12 +170,11 @@ def update_tree(tree_widget, text_widget, ssh_wrapper: SSHWrapper):
         tree_widget.insert("", "end", str(target_path), text=d)
         if ssh_wrapper.is_dir(str(target_path)):
             tree_widget.insert(str(target_path), "end", text="<empty>")
-
     tree_widget.bind("<<TreeviewOpen>>", handle_remote_tree_open)
     tree_widget.bind("<<TreeviewSelect>>", handle_remote_tree_select)
 
 
-def remote_dialog(parent, param_holder: ParamHolder, ssh_wrapper: SSHWrapper, tree_widget, text_widget):
+def remote_dialog(parent, param_holder: ParamHolder, ssh_wrapper: SSHWrapper, tree_widget, text_widget, context_menu):
     def apply():
         print(param_holder.params["host"].get())
         ssh_wrapper.close()
@@ -170,7 +188,7 @@ def remote_dialog(parent, param_holder: ParamHolder, ssh_wrapper: SSHWrapper, tr
         if is_connect:
             dialog.grab_release()
             dialog.destroy()
-            update_tree(tree_widget, text_widget, ssh_wrapper)
+            update_tree(tree_widget, text_widget, ssh_wrapper, context_menu)
         else:
             print("connection error")
 
@@ -210,3 +228,40 @@ def remote_dialog(parent, param_holder: ParamHolder, ssh_wrapper: SSHWrapper, tr
     dialog.wait_visibility()
     dialog.grab_set()
     dialog.wait_window()
+
+
+def create_log_window(parent, filepath, ssh_wrapper, context_menu):
+    def handle_log_window_close():
+        for t in file_thread:
+            if t.filepath == filepath:
+                print(f"stop reading {filepath}")
+                t.is_stop = True
+                t.join()
+                break
+        log_window.grab_release()
+        log_window.destroy()
+
+    stop_file_thread()
+    context_menu.unpost()
+    log_window = Toplevel(parent)
+    log_window.title(filepath)
+    log_window.columnconfigure(0, weight=1)
+    log_window.rowconfigure(0, weight=1)
+
+    log_window.protocol("WM_DELETE_WINDOW", handle_log_window_close)
+
+    log_text = Text(log_window)
+    vscroll = Scrollbar(log_window, orient=VERTICAL, command=log_text.yview)
+    log_text["yscrollcommand"] = vscroll.set
+
+    log_text.grid(column=0, row=0, sticky=(N, S, E, W))
+    vscroll.grid(column=1, row=0, sticky=(N, S))
+    log_text.columnconfigure(0, weight=1)
+    log_text.rowconfigure(0, weight=1)
+    remote_file_thread = RemoteFileThread(filepath, ssh_wrapper.sftp_client, log_text)
+    file_thread.append(remote_file_thread)
+    remote_file_thread.start()
+    # log_window.transient(parent)
+    # log_window.wait_visibility()
+    # log_window.grab_set()
+    # log_window.wait_window()

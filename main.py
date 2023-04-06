@@ -4,7 +4,7 @@ import tkinter.filedialog
 from pathlib import Path
 from tkinter import *
 from tkinter import ttk
-from custom_dialog import remote_dialog, ParamHolder, SSHWrapper, stop_file_thread
+from custom_dialog import remote_dialog, ParamHolder, SSHWrapper, stop_file_thread, create_log_window
 
 home_dir = os.listdir("/home/eason")
 param_holder = ParamHolder()
@@ -41,7 +41,7 @@ def handle_tree_select(x):
 
 
 def show_remote_dialog():
-    remote_dialog(root, param_holder, ssh_wrapper, file_tree, text_widget)
+    remote_dialog(root, param_holder, ssh_wrapper, file_tree, text_widget, context_menu)
 
 
 def handle_window_close():
@@ -88,11 +88,18 @@ def redraw_widget(e):
     # n_file_tree.grid(column=0, row=0, sticky=(N, S, E, W))
 
 
+def handle_mouse_click(e):
+    # from custom_dialog import context_menu
+    if context_menu is not None:
+        context_menu.unpost()
+
+
 root = Tk()
 root.title("Log Viewer")
 root.minsize(1280, 800)
 root.option_add("*tearOff", FALSE)
 root.protocol("WM_DELETE_WINDOW", handle_window_close)
+root.bind("<ButtonPress-1>", handle_mouse_click)
 
 from icons import *
 
@@ -105,12 +112,16 @@ root["menu"] = menubar
 menubar.add_command(label="download", image=ICON_DOWNLOAD)
 menubar.add_command(label="setting", image=ICON_GEAR, command=show_remote_dialog)
 
-
 file_list_frame = ttk.Frame(mainframe)
 
 text_frame = ttk.Frame(mainframe)
 file_tree = ttk.Treeview(file_list_frame)
 file_tree.column("#0", width=500, stretch=True)
+
+context_menu = Menu(file_tree)
+context_menu.add_command(label="toggle")
+context_menu.add_command(label="open", command=lambda: create_log_window(root, file_tree.focus(), ssh_wrapper, context_menu))
+context_menu.add_command(label="open in new window")
 
 text_widget = Text(text_frame)
 file_list_scroll_y = Scrollbar(file_list_frame, orient=VERTICAL, command=file_tree.yview)
@@ -129,15 +140,12 @@ sep.bind("<B1-Motion>", resize_widget)
 sep.bind("<ButtonRelease>", redraw_widget)
 
 for d in home_dir:
-    file_tree.insert("", "end", str(Path("/home/eason")/d), text=d)
-    if (Path("/home/eason")/d).is_dir():
-        file_tree.insert(str(Path("/home/eason")/d), "end", text="<empty>")
-
+    file_tree.insert("", "end", str(Path.home()/d), text=d)
+    if (Path.home()/d).is_dir():
+        file_tree.insert(str(Path.home()/d), "end", text="<empty>")
 
 # file_tree.bind("<<TreeviewOpen>>", handle_tree_open)
 # file_tree.bind("<<TreeviewSelect>>", handle_tree_select)
-
-
 file_list_frame.grid(column=0, row=0, sticky=(N, S, E, W))
 sep.grid(column=1, row=0, sticky=(N, S))
 text_frame.grid(column=2, row=0, sticky=(N, S, E, W))
